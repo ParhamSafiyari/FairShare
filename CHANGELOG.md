@@ -3,6 +3,11 @@
 All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2] - 2026-07-20
+
+### Fixed
+- Fixed the deployed site serving a stale, previously-cached version of the app after updates (visible as the app freezing again after a fix had already been pushed). The service worker now fetches HTML pages network-first, so new deploys are picked up immediately; static assets (icons, manifest, locales) remain cache-first for speed and offline support.
+
 ## [1.0.1] - 2026-07-19
 
 ### Fixed

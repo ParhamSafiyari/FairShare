@@ -1,7 +1,7 @@
 // FairShare service worker
 // Caches the app shell so it works offline and loads instantly once installed.
 
-const CACHE_NAME = 'fairshare-v1.0.0';
+const CACHE_NAME = 'fairshare-v1.0.2';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
@@ -33,10 +33,27 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Cache-first: instant loads once installed, falls back to network for anything new.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // Page loads: always try the network first, so a new deploy shows up
+  // immediately instead of being stuck behind an old cached HTML file.
+  // Falls back to the cached copy only when offline.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Static assets (icons, manifest, locale files): cache-first for speed
+  // and offline support, since these change far less often than the page itself.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
