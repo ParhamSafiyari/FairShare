@@ -1,0 +1,23 @@
+{
+  "choose_language": "Choose language / زبان را انتخاب کنید:\n  1) English\n  2) فارسی\n> ",
+  "invalid_language": "Invalid choice. Please enter 1 or 2.",
+  "intro": "Enter each person's name and the amount they paid.\nType 'done' as the name when you're finished.\n",
+  "name_prompt": "Name: ",
+  "empty_name": "  Name cannot be empty. Try again.",
+  "overwrite_warning": "  '{name}' was already entered. Overwriting previous value.",
+  "amount_prompt": "  Amount paid: ",
+  "negative_amount": "  Amount can't be negative. Try again.",
+  "invalid_number": "  That's not a valid number. Try again.",
+  "need_two_people": "\nYou need at least 2 people to split expenses.",
+  "report_title": "EXPENSE REPORT",
+  "total_spent": "Total spent: {total:.2f}",
+  "num_people": "Number of people: {count}",
+  "fair_share": "Fair share per person: {share:.2f}",
+  "balances_header": "--- Individual Balances ---",
+  "is_owed": "  {name}: is owed {amount:.2f}",
+  "owes": "  {name}: owes {amount:.2f}",
+  "settled": "  {name}: settled up",
+  "settlement_header": "--- Who Should Pay Whom ---",
+  "no_debts": "  Nobody owes anything. Everyone paid their fair share!",
+  "pays": "  {payer} pays {receiver}: {amount:.2f}"
+}

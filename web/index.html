@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>FairShare</title>
+
+<!-- PWA setup -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2A4A">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+
+<!-- iOS: Safari doesn't read the manifest for install behavior, so these are set manually -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FairShare">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --ink:#1B2A4A;
+    --ink-soft:#334463;
+    --paper:#EEF2ED;
+    --card:#FDFEFC;
+    --emerald:#2F9C6A;
+    --emerald-bg:#E4F3EB;
+    --coral:#E2593F;
+    --coral-bg:#FBE9E5;
+    --gold:#C98A2E;
+    --slate:#5B6B73;
+    --line:#DDE4DA;
+    --shadow: 0 30px 60px -20px rgba(27,42,74,0.25), 0 2px 6px rgba(27,42,74,0.08);
+    --radius: 18px;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:
+      radial-gradient(ellipse at top, #F5F8F3 0%, var(--paper) 55%);
+    min-height:100vh;
+    font-family:var(--font-body);
+    color:var(--ink);
+  }
+
+  body{
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:48px 16px 80px;
+  }
+
+  [dir="rtl"] body{ font-family:'Vazirmatn', sans-serif; }
+  [dir="rtl"] .receipt{ font-family:'Vazirmatn', sans-serif; }
+
+  .app{
+    width:100%;
+    max-width:460px;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:22px;
+    padding:0 4px;
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .brand svg{ flex-shrink:0; }
+
+  .brand-text{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:0.01em;
+    color:var(--ink);
+  }
+  [dir="rtl"] .brand-text{ font-family:'Vazirmatn', sans-serif; font-weight:700; }
+
+  .lang-toggle{
+    display:flex;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:3px;
+    gap:2px;
+    box-shadow: 0 1px 2px rgba(27,42,74,0.06);
+  }
+
+  .lang-toggle button{
+    border:none;
+    background:transparent;
+    padding:6px 14px;
+    border-radius:999px;
+    font-family:var(--font-body);
+    font-size:13px;
+    font-weight:600;
+    color:var(--slate);
+    cursor:pointer;
+    transition:background .18s ease, color .18s ease;
+  }
+  [dir="rtl"] .lang-toggle button{ font-family:'Vazirmatn', sans-serif; }
+
+  .lang-toggle button.active{
+    background:var(--ink);
+    color:#fff;
+  }
+
+  /* ---------- Receipt card ---------- */
+  .receipt{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    position:relative;
+  }
+
+  .receipt-head{
+    text-align:center;
+    padding:28px 24px 18px;
+  }
+
+  .receipt-head .wordmark{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:0.14em;
+    color:var(--ink);
+    margin:0 0 6px;
+  }
+  [dir="rtl"] .receipt-head .wordmark{ font-family:'Vazirmatn', sans-serif; letter-spacing:0; }
+
+  .receipt-head .tagline{
+    font-size:13px;
+    color:var(--slate);
+    margin:0;
+  }
+
+  .dash-rule{
+    border:none;
+    border-top:1.5px dashed var(--line);
+    margin:0 24px;
+  }
+
+  .section{
+    padding:20px 24px;
+  }
+
+  .section-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.09em;
+    color:var(--gold);
+    font-weight:600;
+    margin:0 0 14px;
+  }
+  [dir="rtl"] .section-label{ font-family:'Vazirmatn', sans-serif; letter-spacing:0; }
+
+  /* input row */
+  .input-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+  }
+
+  .input-row input{
+    font-family:var(--font-body);
+    font-size:14px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:11px 12px;
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s ease;
+  }
+  [dir="rtl"] .input-row input{ font-family:'Vazirmatn', sans-serif; }
+
+  .input-row input:focus{
+    border-color:var(--ink);
+  }
+
+  .input-row .name-field{ flex:1.3; min-width:0; }
+  .input-row .amount-field{ flex:1; min-width:0; font-family:var(--font-mono); }
+
+  .add-btn{
+    flex-shrink:0;
+    width:42px;
+    border:none;
+    border-radius:10px;
+    background:var(--ink);
+    color:#fff;
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .add-btn:hover{ background:var(--ink-soft); }
+  .add-btn:active{ transform:scale(0.94); }
+
+  /* line items */
+  .items{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .item-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 2px;
+    border-bottom:1px dotted var(--line);
+    font-size:14px;
+  }
+  .item-row:last-child{ border-bottom:none; }
+
+  .item-name{
+    font-weight:500;
+    color:var(--ink);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    padding-inline-end:8px;
+  }
+
+  .item-amount{
+    font-family:var(--font-mono);
+    color:var(--ink-soft);
+    flex-shrink:0;
+  }
+
+  .item-del{
+    background:none;
+    border:none;
+    color:var(--coral);
+    opacity:0.55;
+    cursor:pointer;
+    font-size:15px;
+    padding:2px 0 2px 10px;
+    line-height:1;
+    transition:opacity .15s ease;
+  }
+  [dir="rtl"] .item-del{ padding:2px 10px 2px 0; }
+  .item-del:hover{ opacity:1; }
+
+  .empty-hint{
+    font-size:13px;
+    color:var(--slate);
+    text-align:center;
+    padding:10px 0 2px;
+  }
+
+  /* total row */
+  .total-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1.5px solid var(--ink);
+  }
+
+  .total-row .label{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+  }
+  [dir="rtl"] .total-row .label{ font-family:'Vazirmatn', sans-serif; letter-spacing:0; }
+
+  .total-row .value{
+    font-family:var(--font-mono);
+    font-size:20px;
+    font-weight:600;
+  }
+
+  .split-btn{
+    width:100%;
+    margin-top:18px;
+    padding:13px;
+    border:none;
+    border-radius:12px;
+    background:var(--emerald);
+    color:#fff;
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  [dir="rtl"] .split-btn{ font-family:'Vazirmatn', sans-serif; }
+  .split-btn:hover{ background:#278658; }
+  .split-btn:active{ transform:scale(0.99); }
+  .split-btn:disabled{
+    background:#B8C4BC;
+    cursor:not-allowed;
+  }
+
+  /* ---------- perforated tear ---------- */
+  .tear{
+    position:relative;
+    height:22px;
+    background:
+      radial-gradient(circle at 0 50%, var(--paper) 0, var(--paper) 7px, transparent 7.5px),
+      radial-gradient(circle at 100% 50%, var(--paper) 0, var(--paper) 7px, transparent 7.5px),
+      repeating-linear-gradient(90deg, var(--line) 0 8px, transparent 8px 16px);
+    background-repeat:no-repeat, no-repeat, repeat-x;
+    background-position: left center, right center, center;
+    background-size: 14px 14px, 14px 14px, 100% 1.5px;
+  }
+
+  /* ---------- results ---------- */
+  .balances{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .balance-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 12px;
+    border-radius:10px;
+    font-size:14px;
+  }
+
+  .balance-row.owed{ background:var(--emerald-bg); }
+  .balance-row.owes{ background:var(--coral-bg); }
+  .balance-row.settled{ background:#F1F3EF; }
+
+  .balance-row .who{ font-weight:600; color:var(--ink); }
+
+  .balance-row .amt{
+    font-family:var(--font-mono);
+    font-weight:600;
+  }
+  .balance-row.owed .amt{ color:var(--emerald); }
+  .balance-row.owes .amt{ color:var(--coral); }
+  .balance-row.settled .amt{ color:var(--slate); }
+
+  .balance-row .tag{
+    font-size:11px;
+    color:var(--slate);
+    margin-inline-start:6px;
+    font-weight:500;
+  }
+
+  .transactions{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .tx-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:11px 12px;
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    font-size:14px;
+  }
+
+  .tx-row .tx-names{
+    flex:1;
+    font-weight:500;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    min-width:0;
+  }
+  .tx-row .tx-names span.who{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tx-row .arrow{ color:var(--gold); flex-shrink:0; }
+
+  .tx-row .tx-amt{
+    font-family:var(--font-mono);
+    font-weight:600;
+    color:var(--ink);
+    flex-shrink:0;
+  }
+
+  .fair-share-note{
+    font-size:13px;
+    color:var(--slate);
+    margin:0 0 14px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .fair-share-note .v{ font-family:var(--font-mono); color:var(--ink-soft); font-weight:600; }
+
+  .no-debts{
+    font-size:14px;
+    color:var(--slate);
+    text-align:center;
+    padding:8px 0;
+  }
+
+  /* ---------- footer / barcode ---------- */
+  .receipt-foot{
+    padding:22px 24px 26px;
+    text-align:center;
+  }
+
+  .barcode{
+    display:flex;
+    justify-content:center;
+    align-items:flex-end;
+    gap:2px;
+    height:30px;
+    margin:0 auto 10px;
+    width:fit-content;
+  }
+  .barcode span{
+    display:block;
+    width:2px;
+    background:var(--ink);
+    opacity:0.75;
+  }
+
+  .receipt-foot .thanks{
+    font-size:12px;
+    letter-spacing:0.05em;
+    color:var(--slate);
+    text-transform:uppercase;
+  }
+  [dir="rtl"] .receipt-foot .thanks{ font-family:'Vazirmatn', sans-serif; letter-spacing:0; text-transform:none; }
+
+  .hidden{ display:none !important; }
+
+  @media (max-width:480px){
+    .receipt-head .wordmark{ font-size:22px; }
+    .section{ padding:18px 18px; }
+    .receipt-head{ padding:24px 18px 16px; }
+    .dash-rule{ margin:0 18px; }
+    .receipt-foot{ padding:20px 18px 22px; }
+  }
+
+  button:focus-visible, input:focus-visible{
+    outline:2px solid var(--ink);
+    outline-offset:2px;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app" id="app" dir="ltr">
+
+  <div class="topbar">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <circle cx="13" cy="13" r="12" stroke="#1B2A4A" stroke-width="1.6"/>
+        <path d="M8 13.5L11.2 16.7L18 9.5" stroke="#2F9C6A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="brand-text">FairShare</span>
+    </div>
+    <div class="lang-toggle">
+      <button id="btn-en" class="active" onclick="setLang('en')">EN</button>
+      <button id="btn-fa" onclick="setLang('fa')">فا</button>
+    </div>
+  </div>
+
+  <div class="receipt">
+
+    <div class="receipt-head">
+      <p class="wordmark">F A I R S H A R E</p>
+      <p class="tagline" data-t="tagline">Split the bill. Keep the friendship.</p>
+    </div>
+
+    <hr class="dash-rule">
+
+    <div class="section">
+      <p class="section-label" data-t="label_items">Who paid what</p>
+
+      <div class="input-row">
+        <input type="text" id="name-input" class="name-field" data-t-ph="ph_name" placeholder="Name">
+        <input type="number" id="amount-input" class="amount-field" data-t-ph="ph_amount" placeholder="0.00" min="0" step="0.01">
+        <button class="add-btn" onclick="addPerson()" aria-label="Add">+</button>
+      </div>
+
+      <div class="items" id="items-list"></div>
+      <p class="empty-hint" id="empty-hint" data-t="empty_hint">No one added yet — add your first friend above.</p>
+
+      <div class="total-row">
+        <span class="label" data-t="total">Total</span>
+        <span class="value" id="total-value">0.00</span>
+      </div>
+
+      <button class="split-btn" id="split-btn" onclick="splitBill()" disabled data-t="split_btn">Split the bill</button>
+    </div>
+
+    <div id="results-block" class="hidden">
+      <div class="tear"></div>
+
+      <div class="section">
+        <p class="section-label" data-t="label_balances">Balances</p>
+        <p class="fair-share-note">
+          <span data-t="fair_share_label">Fair share per person</span>
+          <span class="v" id="fair-share-value">0.00</span>
+        </p>
+        <div class="balances" id="balances-list"></div>
+      </div>
+
+      <hr class="dash-rule">
+
+      <div class="section">
+        <p class="section-label" data-t="label_settlement">Who pays whom</p>
+        <div class="transactions" id="transactions-list"></div>
+      </div>
+    </div>
+
+    <div class="receipt-foot">
+      <div class="barcode" id="barcode"></div>
+      <p class="thanks" data-t="thanks">Thanks for splitting with FairShare</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+  // Translations normally live in locales/en.json and locales/fa.json —
+  // this keeps text editable by non-programmers without touching app logic.
+  // This inline copy is ONLY a fallback for when the page is opened directly
+  // as a file:// URL, where browsers block fetch() for local files.
+  const FALLBACK_TEXTS = {
+    tagline:            { en:"Split the bill. Keep the friendship.", fa:"صورت‌حساب را تقسیم کنید، دوستی را حفظ کنید." },
+    label_items:        { en:"Who paid what", fa:"چه کسی چقدر پرداخت کرد" },
+    ph_name:            { en:"Name", fa:"نام" },
+    ph_amount:          { en:"0.00", fa:"۰.۰۰" },
+    empty_hint:         { en:"No one added yet — add your first friend above.", fa:"هنوز کسی اضافه نشده — اولین دوست خود را در بالا اضافه کنید." },
+    total:              { en:"Total", fa:"مجموع" },
+    split_btn:          { en:"Split the bill", fa:"تقسیم صورت‌حساب" },
+    label_balances:     { en:"Balances", fa:"مانده حساب‌ها" },
+    fair_share_label:   { en:"Fair share per person", fa:"دنگ هر فرد" },
+    label_settlement:   { en:"Who pays whom", fa:"چه کسی به چه کسی پرداخت می‌کند" },
+    thanks:             { en:"Thanks for splitting with FairShare", fa:"از تقسیم صورت‌حساب با FairShare متشکریم" },
+    is_owed:            { en:"is owed", fa:"طلبکار است" },
+    owes:               { en:"owes", fa:"بدهکار است" },
+    settled:            { en:"settled up", fa:"تسویه شده" },
+    no_debts:           { en:"Nobody owes anything. Everyone paid their fair share!", fa:"هیچ‌کس بدهکار نیست. همه سهم عادلانه خود را پرداخت کرده‌اند!" },
+    pays:               { en:"pays", fa:"پرداخت می‌کند به" },
+    need_two:           { en:"Add at least 2 people to split a bill.", fa:"برای تقسیم صورت‌حساب حداقل ۲ نفر اضافه کنید." },
+  };
+
+  let TEXTS = FALLBACK_TEXTS;
+
+  async function loadTexts(){
+    try {
+      const [en, fa] = await Promise.all([
+        fetch('locales/en.json').then(r => { if (!r.ok) throw new Error('missing en.json'); return r.json(); }),
+        fetch('locales/fa.json').then(r => { if (!r.ok) throw new Error('missing fa.json'); return r.json(); }),
+      ]);
+      const merged = {};
+      Object.keys(en).forEach(key => {
+        merged[key] = { en: en[key], fa: fa[key] };
+      });
+      TEXTS = merged;
+    } catch (err) {
+      // Likely opened as a local file:// URL, where fetch() of local JSON is blocked.
+      // Falling back to the inline copy above keeps the app usable either way.
+      console.warn('Could not load locales/*.json, using built-in fallback text.', err);
+      TEXTS = FALLBACK_TEXTS;
+    }
+  }
+
+  let LANG = 'en';
+  let people = []; // { id, name, amount }
+  let idCounter = 0;
+
+  function t(key){ return TEXTS[key][LANG]; }
+
+  function setLang(lang){
+    LANG = lang;
+    const app = document.getElementById('app');
+    app.dir = (lang === 'fa') ? 'rtl' : 'ltr';
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-fa').classList.toggle('active', lang === 'fa');
+
+    document.querySelectorAll('[data-t]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-t'));
+    });
+    document.querySelectorAll('[data-t-ph]').forEach(el => {
+      el.setAttribute('placeholder', t(el.getAttribute('data-t-ph')));
+    });
+
+    renderItems();
+    if (!document.getElementById('results-block').classList.contains('hidden')) {
+      splitBill();
+    }
+  }
+
+  function fmt(n){
+    return n.toLocaleString(undefined, { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  function addPerson(){
+    const nameInput = document.getElementById('name-input');
+    const amountInput = document.getElementById('amount-input');
+    const name = nameInput.value.trim();
+    const amount = parseFloat(amountInput.value);
+
+    if (!name) { nameInput.focus(); return; }
+    if (isNaN(amount) || amount < 0) { amountInput.focus(); return; }
+
+    people.push({ id: idCounter++, name, amount });
+    nameInput.value = '';
+    amountInput.value = '';
+    nameInput.focus();
+
+    renderItems();
+    hideResults();
+  }
+
+  function removePerson(id){
+    people = people.filter(p => p.id !== id);
+    renderItems();
+    hideResults();
+  }
+
+  function renderItems(){
+    const list = document.getElementById('items-list');
+    const hint = document.getElementById('empty-hint');
+    list.innerHTML = '';
+
+    if (people.length === 0){
+      hint.classList.remove('hidden');
+    } else {
+      hint.classList.add('hidden');
+      people.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <span class="item-name">${escapeHtml(p.name)}</span>
+          <span class="item-amount">${fmt(p.amount)}</span>
+          <button class="item-del" aria-label="remove" onclick="removePerson(${p.id})">✕</button>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    const total = people.reduce((sum, p) => sum + p.amount, 0);
+    document.getElementById('total-value').textContent = fmt(total);
+    document.getElementById('split-btn').disabled = people.length < 2;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function hideResults(){
+    document.getElementById('results-block').classList.add('hidden');
+  }
+
+  function settleBalances(balances){
+    // balances: { name: number }
+    const bal = {...balances};
+    const transactions = [];
+
+    Object.keys(bal).forEach(k => bal[k] = Math.round(bal[k]*100)/100);
+
+    while(true){
+      const entries = Object.entries(bal);
+      let debtor = entries[0][0], creditor = entries[0][0];
+      entries.forEach(([name, v]) => {
+        if (v < bal[debtor]) debtor = name;
+        if (v > bal[creditor]) creditor = name;
+      });
+
+      if (Math.abs(bal[debtor]) < 0.01 && Math.abs(bal[creditor]) < 0.01) break;
+
+      const amount = Math.round(Math.min(-bal[debtor], bal[creditor]) * 100) / 100;
+      transactions.push({ from: debtor, to: creditor, amount });
+      bal[debtor] += amount;
+      bal[creditor] -= amount;
+    }
+
+    return transactions;
+  }
+
+  function splitBill(){
+    if (people.length < 2) return;
+
+    const total = people.reduce((sum, p) => sum + p.amount, 0);
+    const fairShare = total / people.length;
+
+    const balances = {};
+    people.forEach(p => { balances[p.name] = p.amount - fairShare; });
+
+    const transactions = settleBalances(balances);
+
+    document.getElementById('fair-share-value').textContent = fmt(fairShare);
+
+    const balList = document.getElementById('balances-list');
+    balList.innerHTML = '';
+    people.forEach(p => {
+      const b = balances[p.name];
+      let cls = 'settled', tag = t('settled'), amtDisplay = fmt(Math.abs(b));
+      if (b > 0.01) { cls = 'owed'; tag = t('is_owed'); }
+      else if (b < -0.01) { cls = 'owes'; tag = t('owes'); }
+
+      const row = document.createElement('div');
+      row.className = `balance-row ${cls}`;
+      row.innerHTML = `
+        <span class="who">${escapeHtml(p.name)} <span class="tag">${tag}</span></span>
+        <span class="amt">${cls === 'settled' ? '—' : fmt(Math.abs(b))}</span>
+      `;
+      balList.appendChild(row);
+    });
+
+    const txList = document.getElementById('transactions-list');
+    txList.innerHTML = '';
+    if (transactions.length === 0){
+      txList.innerHTML = `<p class="no-debts">${t('no_debts')}</p>`;
+    } else {
+      transactions.forEach(tx => {
+        const row = document.createElement('div');
+        row.className = 'tx-row';
+        row.innerHTML = `
+          <span class="tx-names">
+            <span class="who">${escapeHtml(tx.from)}</span>
+            <span class="arrow">${LANG === 'fa' ? '←' : '→'}</span>
+            <span class="who">${escapeHtml(tx.to)}</span>
+          </span>
+          <span class="tx-amt">${fmt(tx.amount)}</span>
+        `;
+        txList.appendChild(row);
+      });
+    }
+
+    document.getElementById('results-block').classList.remove('hidden');
+  }
+
+  function buildBarcode(){
+    const bc = document.getElementById('barcode');
+    const widths = [2,1,3,1,2,1,1,3,2,1,3,1,1,2,1,3,2,1,1,2,3,1,2,1];
+    bc.innerHTML = '';
+    widths.forEach(w => {
+      const bar = document.createElement('span');
+      const h = 14 + (w * 5);
+      bar.style.height = h + 'px';
+      bar.style.width = (w === 1 ? 1.5 : w === 2 ? 2.5 : 3.5) + 'px';
+      bc.appendChild(bar);
+    });
+  }
+
+  document.getElementById('amount-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPerson();
+  });
+  document.getElementById('name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('amount-input').focus();
+  });
+
+  async function init(){
+    await loadTexts();
+    setLang('en');
+    buildBarcode();
+    renderItems();
+  }
+
+  init();
+
+  // Register service worker so the app installs and works offline.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+
+</script>
+
+</body>
+</html>
