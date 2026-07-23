@@ -111,26 +111,30 @@ def settle_balances(balances):
     Greedy settlement algorithm.
     Repeatedly match the biggest debtor with the biggest creditor
     until everyone is settled. Returns a list of (payer, receiver, amount).
+
+    Works in integer cents rather than floating-point dollars. Floats caused
+    an infinite loop whenever a bill didn't divide evenly (e.g. $100 split
+    3 ways), because tiny rounding leftovers were never quite recognized as
+    "settled." Integer cents avoid that drift, and the loop is capped at
+    len(balances) iterations as a hard guarantee it can never hang.
     """
-    balances = dict(balances)
+    cents = {name: round(amount * 100) for name, amount in balances.items()}
     transactions = []
 
-    balances = {name: round(amount, 2) for name, amount in balances.items()}
+    for _ in range(len(cents)):  # at most n-1 transactions are ever needed
+        debtor = min(cents, key=cents.get)
+        creditor = max(cents, key=cents.get)
 
-    while True:
-        debtor = min(balances, key=balances.get)
-        creditor = max(balances, key=balances.get)
+        if cents[debtor] >= 0 or cents[creditor] <= 0:
+            break  # nothing meaningful left to transfer
 
-        if abs(balances[debtor]) < 0.01 and abs(balances[creditor]) < 0.01:
+        amount_cents = min(-cents[debtor], cents[creditor])
+        if amount_cents <= 0:
             break
 
-        amount = min(-balances[debtor], balances[creditor])
-        amount = round(amount, 2)
-
-        transactions.append((debtor, creditor, amount))
-
-        balances[debtor] += amount
-        balances[creditor] -= amount
+        transactions.append((debtor, creditor, amount_cents / 100))
+        cents[debtor] += amount_cents
+        cents[creditor] -= amount_cents
 
     return transactions
 

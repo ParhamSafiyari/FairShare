@@ -3,6 +3,11 @@
 All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1] - 2026-07-19
+
+### Fixed
+- Fixed a bug where splitting a bill that didn't divide evenly among people (e.g. $100 split 3 ways) could freeze the app in an infinite loop. The settlement algorithm now does its math in integer cents instead of floating-point dollars, which was the source of the rounding drift, and the loop is now hard-capped so it can never hang.
+
 ## [1.0.0] - 2026-07-18
 
 ### Added

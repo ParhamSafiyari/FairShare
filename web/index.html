@@ -678,26 +678,34 @@
   }
 
   function settleBalances(balances){
-    // balances: { name: number }
-    const bal = {...balances};
+    // Works in integer cents rather than floating-point dollars. Floats caused
+    // an infinite loop (and a frozen tab) whenever a bill didn't divide evenly
+    // among people. The loop is also capped at n iterations as a hard
+    // guarantee it can never hang, no matter what.
+    const cents = {};
+    Object.keys(balances).forEach(name => {
+      cents[name] = Math.round(balances[name] * 100);
+    });
+
     const transactions = [];
+    const n = Object.keys(cents).length;
 
-    Object.keys(bal).forEach(k => bal[k] = Math.round(bal[k]*100)/100);
-
-    while(true){
-      const entries = Object.entries(bal);
+    for (let i = 0; i < n; i++){
+      const entries = Object.entries(cents);
       let debtor = entries[0][0], creditor = entries[0][0];
       entries.forEach(([name, v]) => {
-        if (v < bal[debtor]) debtor = name;
-        if (v > bal[creditor]) creditor = name;
+        if (v < cents[debtor]) debtor = name;
+        if (v > cents[creditor]) creditor = name;
       });
 
-      if (Math.abs(bal[debtor]) < 0.01 && Math.abs(bal[creditor]) < 0.01) break;
+      if (cents[debtor] >= 0 || cents[creditor] <= 0) break;
 
-      const amount = Math.round(Math.min(-bal[debtor], bal[creditor]) * 100) / 100;
-      transactions.push({ from: debtor, to: creditor, amount });
-      bal[debtor] += amount;
-      bal[creditor] -= amount;
+      const amountCents = Math.min(-cents[debtor], cents[creditor]);
+      if (amountCents <= 0) break;
+
+      transactions.push({ from: debtor, to: creditor, amount: amountCents / 100 });
+      cents[debtor] += amountCents;
+      cents[creditor] -= amountCents;
     }
 
     return transactions;
