@@ -15,5 +15,10 @@
   "settled": "settled up",
   "no_debts": "Nobody owes anything. Everyone paid their fair share!",
   "pays": "pays",
-  "need_two": "Add at least 2 people to split a bill."
+  "need_two": "Add at least 2 people to split a bill.",
+  "install_title": "Get this on your phone",
+  "install_ios_steps": "Tap the Share icon, then \"Add to Home Screen\"",
+  "install_android_steps": "Open the browser menu and tap \"Install app\"",
+  "install_btn": "Install App",
+  "install_dismiss": "Not now"
 }

@@ -463,6 +463,85 @@
     outline-offset:2px;
   }
 
+  /* ---------- install banner ---------- */
+  .install-banner{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 20px;
+    margin-bottom:16px;
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+  }
+
+  .install-banner .icon{
+    flex-shrink:0;
+    width:40px;
+    height:40px;
+    border-radius:10px;
+    background:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .install-banner .content{ flex:1; min-width:0; }
+
+  .install-banner .title{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:15px;
+    color:var(--ink);
+    margin:0 0 4px;
+  }
+  [dir="rtl"] .install-banner .title{ font-family:'Vazirmatn', sans-serif; }
+
+  .install-banner .steps{
+    font-size:13px;
+    color:var(--slate);
+    margin:0;
+    line-height:1.5;
+  }
+
+  .install-banner .steps .share-icon-inline{
+    display:inline-block;
+    vertical-align:-3px;
+    margin:0 2px;
+  }
+
+  .install-banner .actions{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+  }
+
+  .install-banner .btn-install{
+    background:var(--emerald);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:600;
+    font-family:var(--font-body);
+    cursor:pointer;
+  }
+  [dir="rtl"] .install-banner .btn-install{ font-family:'Vazirmatn', sans-serif; }
+  .install-banner .btn-install:hover{ background:#278658; }
+
+  .install-banner .btn-dismiss{
+    background:none;
+    border:none;
+    color:var(--slate);
+    font-size:13px;
+    font-family:var(--font-body);
+    cursor:pointer;
+    padding:8px 6px;
+  }
+  [dir="rtl"] .install-banner .btn-dismiss{ font-family:'Vazirmatn', sans-serif; }
+  .install-banner .btn-dismiss:hover{ color:var(--ink); }
+
 </style>
 </head>
 <body>
@@ -480,6 +559,23 @@
     <div class="lang-toggle">
       <button id="btn-en" class="active" onclick="setLang('en')">EN</button>
       <button id="btn-fa" onclick="setLang('fa')">فا</button>
+    </div>
+  </div>
+
+  <div class="install-banner hidden" id="install-banner">
+    <div class="icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="4" y="1.5" width="12" height="17" rx="2" stroke="white" stroke-width="1.4"/>
+        <circle cx="10" cy="15.2" r="0.9" fill="white"/>
+      </svg>
+    </div>
+    <div class="content">
+      <p class="title" data-t="install_title">Get this on your phone</p>
+      <p class="steps" id="install-steps"></p>
+      <div class="actions">
+        <button class="btn-install hidden" id="install-btn" data-t="install_btn">Install App</button>
+        <button class="btn-dismiss" id="install-dismiss" data-t="install_dismiss">Not now</button>
+      </div>
     </div>
   </div>
 
@@ -564,6 +660,11 @@
     no_debts:           { en:"Nobody owes anything. Everyone paid their fair share!", fa:"هیچ‌کس بدهکار نیست. همه سهم عادلانه خود را پرداخت کرده‌اند!" },
     pays:               { en:"pays", fa:"پرداخت می‌کند به" },
     need_two:           { en:"Add at least 2 people to split a bill.", fa:"برای تقسیم صورت‌حساب حداقل ۲ نفر اضافه کنید." },
+    install_title:      { en:"Get this on your phone", fa:"این را روی گوشی خود نصب کنید" },
+    install_ios_steps:  { en:"Tap the Share icon, then \"Add to Home Screen\"", fa:"روی آیکون اشتراک‌گذاری بزنید، سپس «افزودن به صفحه اصلی»" },
+    install_android_steps: { en:"Open the browser menu and tap \"Install app\"", fa:"منوی مرورگر را باز کنید و «نصب برنامه» را بزنید" },
+    install_btn:        { en:"Install App", fa:"نصب برنامه" },
+    install_dismiss:    { en:"Not now", fa:"فعلاً نه" },
   };
 
   let TEXTS = FALLBACK_TEXTS;
@@ -611,6 +712,7 @@
     if (!document.getElementById('results-block').classList.contains('hidden')) {
       splitBill();
     }
+    updateInstallStepsText();
   }
 
   function fmt(n){
@@ -789,9 +891,61 @@
     setLang('en');
     buildBarcode();
     renderItems();
+    initInstallBanner();
   }
 
   init();
+
+  // ---------- Install banner (Add to Home Screen guide) ----------
+  let deferredInstallPrompt = null;
+
+  function isStandaloneMode(){
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  function isIOS(){
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  }
+  function isAndroid(){
+    return /android/i.test(navigator.userAgent);
+  }
+
+  function updateInstallStepsText(){
+    const stepsEl = document.getElementById('install-steps');
+    if (!stepsEl) return;
+    if (deferredInstallPrompt) { stepsEl.textContent = ''; return; }
+    stepsEl.textContent = isIOS() ? t('install_ios_steps') : t('install_android_steps');
+  }
+
+  function initInstallBanner(){
+    if (isStandaloneMode()) return;
+    if (!isIOS() && !isAndroid()) return;
+    if (localStorage.getItem('fairshare-install-dismissed') === 'true') return;
+
+    const banner = document.getElementById('install-banner');
+    banner.classList.remove('hidden');
+    updateInstallStepsText();
+
+    document.getElementById('install-dismiss').addEventListener('click', () => {
+      banner.classList.add('hidden');
+      localStorage.setItem('fairshare-install-dismissed', 'true');
+    });
+
+    document.getElementById('install-btn').addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      if (choice.outcome === 'accepted') banner.classList.add('hidden');
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const installBtn = document.getElementById('install-btn');
+    if (installBtn) installBtn.classList.remove('hidden');
+    updateInstallStepsText();
+  });
 
   // Register service worker so the app installs and works offline.
   if ('serviceWorker' in navigator) {
