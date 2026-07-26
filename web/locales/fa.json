@@ -20,5 +20,13 @@
   "install_ios_steps": "روی آیکون اشتراک‌گذاری بزنید، سپس «افزودن به صفحه اصلی»",
   "install_android_steps": "منوی مرورگر را باز کنید و «نصب برنامه» را بزنید",
   "install_btn": "نصب برنامه",
-  "install_dismiss": "فعلاً نه"
+  "install_dismiss": "فعلاً نه",
+  "label_roster": "چه کسانی هستند",
+  "roster_empty_hint": "همه کسانی که در این خرج شریک هستند را اضافه کنید.",
+  "label_expense": "افزودن یک هزینه",
+  "ph_desc": "چه چیزی بود؟",
+  "split_among_label": "تقسیم بین",
+  "add_expense_btn": "افزودن هزینه",
+  "expenses_empty_hint": "هنوز هزینه‌ای ثبت نشده.",
+  "default_expense_label": "مورد"
 }
