@@ -402,15 +402,6 @@
     flex-shrink:0;
   }
 
-  .fair-share-note{
-    font-size:13px;
-    color:var(--slate);
-    margin:0 0 14px;
-    display:flex;
-    justify-content:space-between;
-  }
-  .fair-share-note .v{ font-family:var(--font-mono); color:var(--ink-soft); font-weight:600; }
-
   .no-debts{
     font-size:14px;
     color:var(--slate);
@@ -716,10 +707,6 @@
 
       <div class="section">
         <p class="section-label" data-t="label_balances">Balances</p>
-        <p class="fair-share-note">
-          <span data-t="fair_share_label">Fair share per person</span>
-          <span class="v" id="fair-share-value">0.00</span>
-        </p>
         <div class="balances" id="balances-list"></div>
       </div>
 
@@ -980,15 +967,39 @@
     document.getElementById('results-block').classList.add('hidden');
   }
 
+  function toBalancedCents(balances){
+    // Rounding each person's balance to cents independently can leave the
+    // group's total slightly off zero (e.g. splitting $100 seven ways).
+    // This nudges the 1-2 cent difference onto whoever's rounding error was
+    // largest, so the total always sums to exactly zero and everyone can be
+    // fully settled - no stray pennies left unassigned to anyone.
+    const raw = {};
+    Object.keys(balances).forEach(k => { raw[k] = balances[k] * 100; });
+
+    const rounded = {};
+    let sum = 0;
+    Object.keys(raw).forEach(k => { rounded[k] = Math.round(raw[k]); sum += rounded[k]; });
+
+    if (sum !== 0){
+      const errors = Object.keys(raw).map(k => ({ k, err: rounded[k] - raw[k] }));
+      errors.sort((a, b) => sum > 0 ? b.err - a.err : a.err - b.err);
+      let remaining = Math.abs(sum);
+      let i = 0;
+      while (remaining > 0 && i < errors.length){
+        rounded[errors[i].k] += sum > 0 ? -1 : 1;
+        remaining--;
+        i++;
+      }
+    }
+    return rounded;
+  }
+
   function settleBalances(balances){
     // Works in integer cents rather than floating-point dollars. Floats caused
     // an infinite loop (and a frozen tab) whenever a bill didn't divide evenly
     // among people. The loop is also capped at n iterations as a hard
     // guarantee it can never hang, no matter what.
-    const cents = {};
-    Object.keys(balances).forEach(name => {
-      cents[name] = Math.round(balances[name] * 100);
-    });
+    const cents = toBalancedCents(balances);
 
     const transactions = [];
     const n = Object.keys(cents).length;
@@ -1032,15 +1043,10 @@
       });
     });
 
-    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const fairShare = total / roster.length;
-
     const balances = {};
     roster.forEach(p => { balances[p.name] = (paidTotals[p.id] || 0) - (owedTotals[p.id] || 0); });
 
     const transactions = settleBalances(balances);
-
-    document.getElementById('fair-share-value').textContent = fmt(fairShare);
 
     const balList = document.getElementById('balances-list');
     balList.innerHTML = '';

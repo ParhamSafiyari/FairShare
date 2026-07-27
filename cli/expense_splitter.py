@@ -178,6 +178,32 @@ def calculate_balances(roster, expenses):
     balances = {name: paid_totals[name] - owed_totals[name] for name in roster}
     return balances
 
+def to_balanced_cents(balances):
+    """
+    Round each person's balance to cents, then correct the total so it sums
+    to exactly zero. Rounding independently can leave the group's total
+    slightly off (e.g. splitting $100 seven ways) - this nudges the leftover
+    cent(s) onto whoever's rounding error was largest, so everyone can be
+    fully settled with no stray pennies left unassigned to anyone.
+    """
+    raw = {name: amount * 100 for name, amount in balances.items()}
+    rounded = {name: round(value) for name, value in raw.items()}
+    total = sum(rounded.values())
+
+    if total != 0:
+        errors = sorted(
+            raw.keys(),
+            key=lambda name: (rounded[name] - raw[name]),
+            reverse=(total > 0),
+        )
+        remaining = abs(total)
+        i = 0
+        while remaining > 0 and i < len(errors):
+            rounded[errors[i]] += -1 if total > 0 else 1
+            remaining -= 1
+            i += 1
+
+    return rounded
 
 def settle_balances(balances):
     """
@@ -188,7 +214,7 @@ def settle_balances(balances):
     Works in integer cents rather than floating-point dollars, and the loop
     is capped at len(balances) iterations as a hard guarantee it can never hang.
     """
-    cents = {name: round(amount * 100) for name, amount in balances.items()}
+    cents = to_balanced_cents(balances)
     transactions = []
 
     for _ in range(len(cents)):
