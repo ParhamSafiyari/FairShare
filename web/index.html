@@ -542,6 +542,89 @@
   [dir="rtl"] .install-banner .btn-dismiss{ font-family:'Vazirmatn', sans-serif; }
   .install-banner .btn-dismiss:hover{ color:var(--ink); }
 
+  /* ---------- expense form additions ---------- */
+  .paidby-select{
+    width:100%;
+    font-family:var(--font-body);
+    font-size:14px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:11px 12px;
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+  }
+  [dir="rtl"] .paidby-select{ font-family:'Vazirmatn', sans-serif; }
+  .paidby-select:focus{ border-color:var(--ink); }
+
+  .split-among-label{
+    font-size:12px;
+    color:var(--slate);
+    margin:10px 0 6px;
+  }
+  [dir="rtl"] .split-among-label{ font-family:'Vazirmatn', sans-serif; }
+
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:12px;
+  }
+
+  .chip{
+    font-size:13px;
+    font-family:var(--font-body);
+    padding:6px 12px;
+    border-radius:999px;
+    border:1.5px solid var(--line);
+    background:#fff;
+    color:var(--slate);
+    cursor:pointer;
+    user-select:none;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  [dir="rtl"] .chip{ font-family:'Vazirmatn', sans-serif; }
+  .chip.selected{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:#fff;
+  }
+
+  .add-btn.full-width{
+    width:100%;
+    height:auto;
+    padding:11px;
+    font-size:14px;
+    font-weight:600;
+    font-family:var(--font-body);
+    margin-bottom:4px;
+  }
+  [dir="rtl"] .add-btn.full-width{ font-family:'Vazirmatn', sans-serif; }
+
+  .expense-row{
+    display:flex;
+    flex-direction:column;
+    padding:10px 2px;
+    border-bottom:1px dotted var(--line);
+    font-size:14px;
+    gap:2px;
+  }
+  .expense-row:last-child{ border-bottom:none; }
+  .expense-row .expense-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .expense-row .expense-desc{ font-weight:500; color:var(--ink); }
+  .expense-row .expense-amount{ font-family:var(--font-mono); color:var(--ink-soft); }
+  .expense-row .expense-meta{
+    font-size:12px;
+    color:var(--slate);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+
 </style>
 </head>
 <body>
@@ -589,16 +672,36 @@
     <hr class="dash-rule">
 
     <div class="section">
-      <p class="section-label" data-t="label_items">Who paid what</p>
+      <p class="section-label" data-t="label_roster">Who's here</p>
+      <div class="input-row">
+        <input type="text" id="roster-input" class="name-field" data-t-ph="ph_name" placeholder="Name" style="flex:1;">
+        <button class="add-btn" onclick="addRosterPerson()" aria-label="Add">+</button>
+      </div>
+      <div class="items" id="roster-list"></div>
+      <p class="empty-hint" id="roster-empty-hint" data-t="roster_empty_hint">Add everyone who's splitting this outing.</p>
+    </div>
+
+    <hr class="dash-rule">
+
+    <div class="section">
+      <p class="section-label" data-t="label_expense">Add an expense</p>
 
       <div class="input-row">
-        <input type="text" id="name-input" class="name-field" data-t-ph="ph_name" placeholder="Name">
-        <input type="number" id="amount-input" class="amount-field" data-t-ph="ph_amount" placeholder="0.00" min="0" step="0.01">
-        <button class="add-btn" onclick="addPerson()" aria-label="Add">+</button>
+        <input type="text" id="expense-desc" class="name-field" data-t-ph="ph_desc" placeholder="What was it?" style="flex:1.4;">
+        <input type="number" id="expense-amount" class="amount-field" data-t-ph="ph_amount" placeholder="0.00" min="0" step="0.01">
       </div>
 
-      <div class="items" id="items-list"></div>
-      <p class="empty-hint" id="empty-hint" data-t="empty_hint">No one added yet — add your first friend above.</p>
+      <div class="input-row" style="margin-bottom:6px;">
+        <select id="expense-paidby" class="paidby-select"></select>
+      </div>
+
+      <p class="split-among-label" data-t="split_among_label">Split between</p>
+      <div class="chips" id="participant-chips"></div>
+
+      <button class="add-btn full-width" onclick="addExpense()" data-t="add_expense_btn">Add expense</button>
+
+      <div class="items" id="expenses-list" style="margin-top:14px;"></div>
+      <p class="empty-hint" id="expenses-empty-hint" data-t="expenses_empty_hint">No expenses yet.</p>
 
       <div class="total-row">
         <span class="label" data-t="total">Total</span>
@@ -665,6 +768,14 @@
     install_android_steps: { en:"Open the browser menu and tap \"Install app\"", fa:"منوی مرورگر را باز کنید و «نصب برنامه» را بزنید" },
     install_btn:        { en:"Install App", fa:"نصب برنامه" },
     install_dismiss:    { en:"Not now", fa:"فعلاً نه" },
+    label_roster:       { en:"Who's here", fa:"چه کسانی هستند" },
+    roster_empty_hint:  { en:"Add everyone who's splitting this outing.", fa:"همه کسانی که در این خرج شریک هستند را اضافه کنید." },
+    label_expense:      { en:"Add an expense", fa:"افزودن یک هزینه" },
+    ph_desc:            { en:"What was it?", fa:"چه چیزی بود؟" },
+    split_among_label:  { en:"Split between", fa:"تقسیم بین" },
+    add_expense_btn:    { en:"Add expense", fa:"افزودن هزینه" },
+    expenses_empty_hint:{ en:"No expenses yet.", fa:"هنوز هزینه‌ای ثبت نشده." },
+    default_expense_label: { en:"Item", fa:"مورد" },
   };
 
   let TEXTS = FALLBACK_TEXTS;
@@ -689,90 +800,180 @@
   }
 
   let LANG = 'en';
-  let people = []; // { id, name, amount }
-  let idCounter = 0;
+  let roster = [];    // { id, name }
+  let expenses = [];  // { id, description, amount, paidBy: personId, participants: [personId, ...] }
+  let rosterIdCounter = 0;
+  let expenseIdCounter = 0;
 
   function t(key){ return TEXTS[key][LANG]; }
 
-  function setLang(lang){
-    LANG = lang;
-    const app = document.getElementById('app');
-    app.dir = (lang === 'fa') ? 'rtl' : 'ltr';
-    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-    document.getElementById('btn-fa').classList.toggle('active', lang === 'fa');
-
-    document.querySelectorAll('[data-t]').forEach(el => {
-      el.textContent = t(el.getAttribute('data-t'));
-    });
-    document.querySelectorAll('[data-t-ph]').forEach(el => {
-      el.setAttribute('placeholder', t(el.getAttribute('data-t-ph')));
-    });
-
-    renderItems();
-    if (!document.getElementById('results-block').classList.contains('hidden')) {
-      splitBill();
-    }
-    updateInstallStepsText();
-  }
-
   function fmt(n){
     return n.toLocaleString(undefined, { minimumFractionDigits:2, maximumFractionDigits:2 });
-  }
-
-  function addPerson(){
-    const nameInput = document.getElementById('name-input');
-    const amountInput = document.getElementById('amount-input');
-    const name = nameInput.value.trim();
-    const amount = parseFloat(amountInput.value);
-
-    if (!name) { nameInput.focus(); return; }
-    if (isNaN(amount) || amount < 0) { amountInput.focus(); return; }
-
-    people.push({ id: idCounter++, name, amount });
-    nameInput.value = '';
-    amountInput.value = '';
-    nameInput.focus();
-
-    renderItems();
-    hideResults();
-  }
-
-  function removePerson(id){
-    people = people.filter(p => p.id !== id);
-    renderItems();
-    hideResults();
-  }
-
-  function renderItems(){
-    const list = document.getElementById('items-list');
-    const hint = document.getElementById('empty-hint');
-    list.innerHTML = '';
-
-    if (people.length === 0){
-      hint.classList.remove('hidden');
-    } else {
-      hint.classList.add('hidden');
-      people.forEach(p => {
-        const row = document.createElement('div');
-        row.className = 'item-row';
-        row.innerHTML = `
-          <span class="item-name">${escapeHtml(p.name)}</span>
-          <span class="item-amount">${fmt(p.amount)}</span>
-          <button class="item-del" aria-label="remove" onclick="removePerson(${p.id})">✕</button>
-        `;
-        list.appendChild(row);
-      });
-    }
-
-    const total = people.reduce((sum, p) => sum + p.amount, 0);
-    document.getElementById('total-value').textContent = fmt(total);
-    document.getElementById('split-btn').disabled = people.length < 2;
   }
 
   function escapeHtml(str){
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function personName(id){
+    const p = roster.find(r => r.id === id);
+    return p ? p.name : '?';
+  }
+
+  // ---------- Roster (who's splitting this outing) ----------
+  function addRosterPerson(){
+    const input = document.getElementById('roster-input');
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+
+    roster.push({ id: rosterIdCounter++, name });
+    input.value = '';
+    input.focus();
+
+    renderRoster();
+    renderExpenseForm();
+    hideResults();
+  }
+
+  function removeRosterPerson(id){
+    roster = roster.filter(p => p.id !== id);
+    // Also drop this person from any expense they were paying or splitting.
+    expenses = expenses.filter(e => e.paidBy !== id);
+    expenses.forEach(e => { e.participants = e.participants.filter(pid => pid !== id); });
+    expenses = expenses.filter(e => e.participants.length > 0);
+
+    renderRoster();
+    renderExpenseForm();
+    renderExpenses();
+    hideResults();
+  }
+
+  function renderRoster(){
+    const list = document.getElementById('roster-list');
+    const hint = document.getElementById('roster-empty-hint');
+    list.innerHTML = '';
+
+    if (roster.length === 0){
+      hint.classList.remove('hidden');
+    } else {
+      hint.classList.add('hidden');
+      roster.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <span class="item-name">${escapeHtml(p.name)}</span>
+          <button class="item-del" aria-label="remove" onclick="removeRosterPerson(${p.id})">✕</button>
+        `;
+        list.appendChild(row);
+      });
+    }
+  }
+
+  // ---------- Expense form (paid-by select + participant chips) ----------
+  let selectedParticipants = new Set();
+
+  function renderExpenseForm(){
+    const select = document.getElementById('expense-paidby');
+    const previousValue = select.value;
+    select.innerHTML = '';
+    roster.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+    if (roster.some(p => String(p.id) === previousValue)) select.value = previousValue;
+
+    // Default: everyone currently on the roster is selected to split a new expense.
+    selectedParticipants = new Set(roster.map(p => p.id));
+    renderParticipantChips();
+  }
+
+  function renderParticipantChips(){
+    const wrap = document.getElementById('participant-chips');
+    wrap.innerHTML = '';
+    roster.forEach(p => {
+      const chip = document.createElement('span');
+      chip.className = 'chip' + (selectedParticipants.has(p.id) ? ' selected' : '');
+      chip.textContent = p.name;
+      chip.onclick = () => {
+        if (selectedParticipants.has(p.id)) selectedParticipants.delete(p.id);
+        else selectedParticipants.add(p.id);
+        renderParticipantChips();
+      };
+      wrap.appendChild(chip);
+    });
+  }
+
+  function addExpense(){
+    const descInput = document.getElementById('expense-desc');
+    const amountInput = document.getElementById('expense-amount');
+    const paidBySelect = document.getElementById('expense-paidby');
+
+    const description = descInput.value.trim();
+    const amount = parseFloat(amountInput.value);
+    const paidBy = parseInt(paidBySelect.value, 10);
+    const participants = Array.from(selectedParticipants);
+
+    if (roster.length < 2) return;
+    if (isNaN(amount) || amount <= 0) { amountInput.focus(); return; }
+    if (isNaN(paidBy)) { return; }
+    if (participants.length === 0) { return; }
+
+    expenses.push({
+      id: expenseIdCounter++,
+      description: description || t('default_expense_label'),
+      amount,
+      paidBy,
+      participants,
+    });
+
+    descInput.value = '';
+    amountInput.value = '';
+    descInput.focus();
+
+    renderExpenses();
+    hideResults();
+  }
+
+  function removeExpense(id){
+    expenses = expenses.filter(e => e.id !== id);
+    renderExpenses();
+    hideResults();
+  }
+
+  function renderExpenses(){
+    const list = document.getElementById('expenses-list');
+    const hint = document.getElementById('expenses-empty-hint');
+    list.innerHTML = '';
+
+    if (expenses.length === 0){
+      hint.classList.remove('hidden');
+    } else {
+      hint.classList.add('hidden');
+      expenses.forEach(e => {
+        const row = document.createElement('div');
+        row.className = 'expense-row';
+        const participantNames = e.participants.map(pid => escapeHtml(personName(pid))).join(', ');
+        row.innerHTML = `
+          <div class="expense-top">
+            <span class="expense-desc">${escapeHtml(e.description)}</span>
+            <span class="expense-amount">${fmt(e.amount)}</span>
+          </div>
+          <div class="expense-meta">
+            <span>${escapeHtml(personName(e.paidBy))} → ${participantNames}</span>
+            <button class="item-del" aria-label="remove" onclick="removeExpense(${e.id})">✕</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    document.getElementById('total-value').textContent = fmt(total);
+    document.getElementById('split-btn').disabled = roster.length < 2 || expenses.length === 0;
   }
 
   function hideResults(){
@@ -814,13 +1015,28 @@
   }
 
   function splitBill(){
-    if (people.length < 2) return;
+    if (roster.length < 2 || expenses.length === 0) return;
 
-    const total = people.reduce((sum, p) => sum + p.amount, 0);
-    const fairShare = total / people.length;
+    // Each person's "paid" total and "owed" total are computed per-expense,
+    // since different expenses can be split among different subsets of people
+    // (e.g. cigarettes split only between the smokers, dinner split by everyone).
+    const paidTotals = {};
+    const owedTotals = {};
+    roster.forEach(p => { paidTotals[p.id] = 0; owedTotals[p.id] = 0; });
+
+    expenses.forEach(e => {
+      paidTotals[e.paidBy] = (paidTotals[e.paidBy] || 0) + e.amount;
+      const share = e.amount / e.participants.length;
+      e.participants.forEach(pid => {
+        owedTotals[pid] = (owedTotals[pid] || 0) + share;
+      });
+    });
+
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const fairShare = total / roster.length;
 
     const balances = {};
-    people.forEach(p => { balances[p.name] = p.amount - fairShare; });
+    roster.forEach(p => { balances[p.name] = (paidTotals[p.id] || 0) - (owedTotals[p.id] || 0); });
 
     const transactions = settleBalances(balances);
 
@@ -828,9 +1044,9 @@
 
     const balList = document.getElementById('balances-list');
     balList.innerHTML = '';
-    people.forEach(p => {
+    roster.forEach(p => {
       const b = balances[p.name];
-      let cls = 'settled', tag = t('settled'), amtDisplay = fmt(Math.abs(b));
+      let cls = 'settled', tag = t('settled');
       if (b > 0.01) { cls = 'owed'; tag = t('is_owed'); }
       else if (b < -0.01) { cls = 'owes'; tag = t('owes'); }
 
@@ -866,6 +1082,28 @@
     document.getElementById('results-block').classList.remove('hidden');
   }
 
+  function setLang(lang){
+    LANG = lang;
+    const app = document.getElementById('app');
+    app.dir = (lang === 'fa') ? 'rtl' : 'ltr';
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-fa').classList.toggle('active', lang === 'fa');
+
+    document.querySelectorAll('[data-t]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-t'));
+    });
+    document.querySelectorAll('[data-t-ph]').forEach(el => {
+      el.setAttribute('placeholder', t(el.getAttribute('data-t-ph')));
+    });
+
+    renderRoster();
+    renderExpenseForm();
+    renderExpenses();
+    if (!document.getElementById('results-block').classList.contains('hidden')) {
+      splitBill();
+    }
+    updateInstallStepsText();
+  }
   function buildBarcode(){
     const bc = document.getElementById('barcode');
     const widths = [2,1,3,1,2,1,1,3,2,1,3,1,1,2,1,3,2,1,1,2,3,1,2,1];
@@ -879,18 +1117,23 @@
     });
   }
 
-  document.getElementById('amount-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addPerson();
+  document.getElementById('roster-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addRosterPerson();
   });
-  document.getElementById('name-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('amount-input').focus();
+  document.getElementById('expense-amount').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addExpense();
+  });
+  document.getElementById('expense-desc').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('expense-amount').focus();
   });
 
   async function init(){
     await loadTexts();
     setLang('en');
     buildBarcode();
-    renderItems();
+    renderRoster();
+    renderExpenseForm();
+    renderExpenses();
     initInstallBanner();
   }
 
