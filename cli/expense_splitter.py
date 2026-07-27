@@ -2,12 +2,9 @@
 """
 FairShare CLI (English / Persian)
 ----------------------------------
-Enter each person's name and how much they paid during a group outing.
-The program calculates:
-  - Total amount spent
-  - Each person's fair share
-  - Who owes money and who should be reimbursed
-  - The minimum set of transactions needed to settle up
+Log each expense separately - who paid, and who's splitting it - so a
+purchase like cigarettes can be split only among the people who actually
+want it, while dinner still splits across everyone.
 
 Translations are loaded from locales/en.json and locales/fa.json,
 so adding a new language means adding a new JSON file - no code changes.
@@ -38,8 +35,6 @@ def t(key, **kwargs):
 
 def choose_language():
     """Ask the user to pick a language. Returns 'en' or 'fa'."""
-    # We don't know the language yet, so this prompt is always bilingual
-    # and lives directly in code rather than in a locale file.
     prompt = "Choose language / زبان را انتخاب کنید:\n  1) English\n  2) فارسی\n> "
     invalid_en = "Invalid choice. Please enter 1 or 2."
     invalid_fa = "انتخاب نامعتبر است. لطفاً 1 یا 2 را وارد کنید."
@@ -55,34 +50,77 @@ def choose_language():
             print(invalid_fa)
 
 
-def get_expenses():
-    """Collect names and amounts from the user. Returns a dict {name: amount_paid}."""
-    expenses = {}
-    print(t("intro"))
+def get_roster():
+    """Collect the names of everyone splitting this outing. Returns a list of names."""
+    roster = []
+    print(t("roster_intro"))
 
     while True:
-        name = input(t("name_prompt")).strip()
+        name = input(t("roster_name_prompt")).strip()
         if name.lower() == "done":
             break
         if not name:
             print(t("empty_name"))
             continue
-        if name in expenses:
-            print(t("overwrite_warning", name=name))
+        if name in roster:
+            print(t("duplicate_name_warning", name=name))
+            continue
+        roster.append(name)
 
-        amount = read_amount()
-        expenses[name] = amount
-
-    return expenses
+    return roster
 
 
-def read_amount():
-    """Keep asking until the user enters a valid non-negative number."""
+def print_roster(roster):
+    for i, name in enumerate(roster, start=1):
+        print(f"  {i}) {name}")
+
+
+def pick_one_person(roster, prompt_key):
+    """Ask the user to pick exactly one person from the roster by number."""
+    while True:
+        print_roster(roster)
+        raw = input(t(prompt_key)).strip()
+        try:
+            index = int(raw) - 1
+            if 0 <= index < len(roster):
+                return roster[index]
+        except ValueError:
+            pass
+        print(t("invalid_choice"))
+
+
+def pick_many_people(roster, prompt_key):
+    """Ask the user to pick one or more people from the roster, or 'all'."""
+    while True:
+        print_roster(roster)
+        raw = input(t(prompt_key)).strip()
+        if raw.lower() == "all":
+            return list(roster)
+
+        try:
+            indices = [int(part.strip()) - 1 for part in raw.split(",") if part.strip()]
+            chosen = []
+            valid = True
+            for index in indices:
+                if 0 <= index < len(roster) and roster[index] not in chosen:
+                    chosen.append(roster[index])
+                else:
+                    valid = False
+                    break
+            if valid and chosen:
+                return chosen
+        except ValueError:
+            pass
+        print(t("invalid_choice"))
+
+
+def read_positive_amount():
+    """Keep asking until the user enters a valid positive number."""
     while True:
         raw = input(t("amount_prompt")).strip()
         try:
             amount = float(raw)
-            if amount < 0:
+            if amount <= 0:
                 print(t("negative_amount"))
                 continue
             return amount
@@ -90,20 +128,55 @@ def read_amount():
             print(t("invalid_number"))
 
 
-def calculate_balances(expenses):
+def get_expenses(roster):
     """
-    Given {name: amount_paid}, return:
-      total        - sum of all payments
-      fair_share   - total / number of people
-      balances     - {name: amount_paid - fair_share}
-                     positive = should receive money, negative = owes money
+    Collect a list of expenses, each with a description, amount, who paid,
+    and who's splitting it. Returns a list of dicts:
+    {description, amount, paid_by, participants}
     """
-    total = sum(expenses.values())
-    num_people = len(expenses)
-    fair_share = total / num_people
+    expenses = []
+    print(t("expense_intro"))
 
-    balances = {name: paid - fair_share for name, paid in expenses.items()}
-    return total, fair_share, balances
+    while True:
+        description = input(t("expense_desc_prompt")).strip()
+        if description.lower() == "done":
+            break
+        if not description:
+            description = t("default_expense_label")
+
+        amount = read_positive_amount()
+        paid_by = pick_one_person(roster, "expense_paid_by_prompt")
+        participants = pick_many_people(roster, "expense_participants_prompt")
+
+        expenses.append({
+            "description": description,
+            "amount": amount,
+            "paid_by": paid_by,
+            "participants": participants,
+        })
+        print(t("expense_added", description=description, amount=amount))
+
+    return expenses
+
+
+def calculate_balances(roster, expenses):
+    """
+    Given the roster and a list of expenses, return a dict {name: balance}
+    where a positive balance means that person is owed money, and negative
+    means they owe money. Each expense is split only among its own
+    participants, not the whole roster.
+    """
+    paid_totals = {name: 0.0 for name in roster}
+    owed_totals = {name: 0.0 for name in roster}
+
+    for expense in expenses:
+        paid_totals[expense["paid_by"]] += expense["amount"]
+        share = expense["amount"] / len(expense["participants"])
+        for person in expense["participants"]:
+            owed_totals[person] += share
+
+    balances = {name: paid_totals[name] - owed_totals[name] for name in roster}
+    return balances
 
 
 def settle_balances(balances):
@@ -112,21 +185,18 @@ def settle_balances(balances):
     Repeatedly match the biggest debtor with the biggest creditor
     until everyone is settled. Returns a list of (payer, receiver, amount).
 
-    Works in integer cents rather than floating-point dollars. Floats caused
-    an infinite loop whenever a bill didn't divide evenly (e.g. $100 split
-    3 ways), because tiny rounding leftovers were never quite recognized as
-    "settled." Integer cents avoid that drift, and the loop is capped at
-    len(balances) iterations as a hard guarantee it can never hang.
+    Works in integer cents rather than floating-point dollars, and the loop
+    is capped at len(balances) iterations as a hard guarantee it can never hang.
     """
     cents = {name: round(amount * 100) for name, amount in balances.items()}
     transactions = []
 
-    for _ in range(len(cents)):  # at most n-1 transactions are ever needed
+    for _ in range(len(cents)):
         debtor = min(cents, key=cents.get)
         creditor = max(cents, key=cents.get)
 
         if cents[debtor] >= 0 or cents[creditor] <= 0:
-            break  # nothing meaningful left to transfer
+            break
 
         amount_cents = min(-cents[debtor], cents[creditor])
         if amount_cents <= 0:
@@ -139,14 +209,20 @@ def settle_balances(balances):
     return transactions
 
 
-def print_report(expenses, total, fair_share, balances, transactions):
+def print_report(roster, expenses, balances, transactions):
+    total = sum(e["amount"] for e in expenses)
+
     print("\n" + "=" * 40)
     print(t("report_title"))
     print("=" * 40)
 
     print(f"\n{t('total_spent', total=total)}")
-    print(t("num_people", count=len(expenses)))
-    print(t("fair_share", share=fair_share))
+    print(t("num_people", count=len(roster)))
+
+    print(f"\n{t('expenses_header')}")
+    for e in expenses:
+        participant_names = ", ".join(e["participants"])
+        print(f"  {e['description']}: {e['amount']:.2f} ({t('paid_by_label', name=e['paid_by'])}, {t('split_between_label', names=participant_names)})")
 
     print(f"\n{t('balances_header')}")
     for name, balance in balances.items():
@@ -172,15 +248,19 @@ def main():
     LANGUAGE = choose_language()
     TEXTS = load_locale(LANGUAGE)
 
-    expenses = get_expenses()
-
-    if len(expenses) < 2:
+    roster = get_roster()
+    if len(roster) < 2:
         print(t("need_two_people"))
         return
 
-    total, fair_share, balances = calculate_balances(expenses)
+    expenses = get_expenses(roster)
+    if not expenses:
+        print(t("need_one_expense"))
+        return
+
+    balances = calculate_balances(roster, expenses)
     transactions = settle_balances(balances)
-    print_report(expenses, total, fair_share, balances, transactions)
+    print_report(roster, expenses, balances, transactions)
 
 
 if __name__ == "__main__":
