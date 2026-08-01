@@ -28,5 +28,11 @@
   "split_among_label": "تقسیم بین",
   "add_expense_btn": "افزودن هزینه",
   "expenses_empty_hint": "هنوز هزینه‌ای ثبت نشده.",
-  "default_expense_label": "مورد"
+  "default_expense_label": "مورد",
+  "save_group_btn": "ذخیره به‌عنوان گروه (همگام‌سازی با دوستان)",
+  "group_link_label": "این لینک را با دوستانتان به اشتراک بگذارید:",
+  "copy_btn": "کپی",
+  "copied_label": "کپی شد!",
+  "live_syncing": "همگام‌سازی زنده",
+  "group_create_failed": "ذخیره گروه ممکن نشد. اتصال خود را بررسی کرده و دوباره امتحان کنید."
 }

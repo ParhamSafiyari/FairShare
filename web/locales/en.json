@@ -28,5 +28,11 @@
   "split_among_label": "Split between",
   "add_expense_btn": "Add expense",
   "expenses_empty_hint": "No expenses yet.",
-  "default_expense_label": "Item"
+  "default_expense_label": "Item",
+  "save_group_btn": "Save as a group (sync with friends)",
+  "group_link_label": "Share this link with your friends:",
+  "copy_btn": "Copy",
+  "copied_label": "Copied!",
+  "live_syncing": "Live syncing",
+  "group_create_failed": "Couldn't save this group. Check your connection and try again."
 }

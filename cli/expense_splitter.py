@@ -178,6 +178,7 @@ def calculate_balances(roster, expenses):
     balances = {name: paid_totals[name] - owed_totals[name] for name in roster}
     return balances
 
+
 def to_balanced_cents(balances):
     """
     Round each person's balance to cents, then correct the total so it sums
@@ -204,6 +205,7 @@ def to_balanced_cents(balances):
             i += 1
 
     return rounded
+
 
 def settle_balances(balances):
     """

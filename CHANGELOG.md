@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0] - 2026-07-30
+
+### Added
+- "Save as a group" - persists a group's roster and expenses to a Supabase database and generates a shareable link.
+- Real-time sync: anyone with a group's link sees changes from other people update live, no refresh needed.
+- Creator-only deletion, enforced server-side via a Supabase Edge Function (not just hidden in the UI) - anyone with the link can add roster people or expenses, but only the person who created the group can remove them.
+- Local-only mode (no backend, nothing saved) remains fully available and is still the default when no group is active.
+
 ## [1.0.2] - 2026-07-20
 
 ### Fixed

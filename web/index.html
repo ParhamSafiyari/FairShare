@@ -18,6 +18,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 
@@ -616,6 +617,75 @@
     align-items:center;
   }
 
+  /* ---------- group bar (save/share) ---------- */
+  .group-bar{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px 20px;
+    margin-bottom:16px;
+  }
+  .group-bar:empty{ display:none; }
+
+  .group-bar-label{
+    font-size:13px;
+    color:var(--slate);
+    margin:0 0 8px;
+  }
+  [dir="rtl"] .group-bar-label{ font-family:'Vazirmatn', sans-serif; }
+
+  .group-link-row{
+    display:flex;
+    gap:8px;
+  }
+  .group-link-row input{
+    flex:1;
+    min-width:0;
+    font-family:var(--font-mono);
+    font-size:12px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:9px 10px;
+    background:#F8FAF7;
+    color:var(--ink-soft);
+  }
+  .group-link-row .copy-btn{
+    flex-shrink:0;
+    border:none;
+    border-radius:10px;
+    background:var(--ink);
+    color:#fff;
+    font-family:var(--font-body);
+    font-size:13px;
+    font-weight:600;
+    padding:9px 14px;
+    cursor:pointer;
+  }
+  [dir="rtl"] .group-link-row .copy-btn{ font-family:'Vazirmatn', sans-serif; }
+  .group-link-row .copy-btn:hover{ background:var(--ink-soft); }
+
+  .group-live-indicator{
+    font-size:12px;
+    color:var(--slate);
+    margin:10px 0 0;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  [dir="rtl"] .group-live-indicator{ font-family:'Vazirmatn', sans-serif; }
+  .group-live-indicator .dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--emerald);
+    display:inline-block;
+    animation:pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot{
+    0%, 100% { opacity:1; }
+    50% { opacity:0.35; }
+  }
+
 </style>
 </head>
 <body>
@@ -652,6 +722,8 @@
       </div>
     </div>
   </div>
+
+  <div class="group-bar" id="group-bar"></div>
 
   <div class="receipt">
 
@@ -763,6 +835,12 @@
     add_expense_btn:    { en:"Add expense", fa:"افزودن هزینه" },
     expenses_empty_hint:{ en:"No expenses yet.", fa:"هنوز هزینه‌ای ثبت نشده." },
     default_expense_label: { en:"Item", fa:"مورد" },
+    save_group_btn:      { en:"Save as a group (sync with friends)", fa:"ذخیره به‌عنوان گروه (همگام‌سازی با دوستان)" },
+    group_link_label:    { en:"Share this link with your friends:", fa:"این لینک را با دوستانتان به اشتراک بگذارید:" },
+    copy_btn:            { en:"Copy", fa:"کپی" },
+    copied_label:        { en:"Copied!", fa:"کپی شد!" },
+    live_syncing:        { en:"Live syncing", fa:"همگام‌سازی زنده" },
+    group_create_failed: { en:"Couldn't save this group. Check your connection and try again.", fa:"ذخیره گروه ممکن نشد. اتصال خود را بررسی کرده و دوباره امتحان کنید." },
   };
 
   let TEXTS = FALLBACK_TEXTS;
@@ -789,8 +867,140 @@
   let LANG = 'en';
   let roster = [];    // { id, name }
   let expenses = [];  // { id, description, amount, paidBy: personId, participants: [personId, ...] }
-  let rosterIdCounter = 0;
-  let expenseIdCounter = 0;
+
+  function newId(){
+    // crypto.randomUUID is supported in all modern browsers. Using a random
+    // id instead of an incrementing counter matters once a group is shared:
+    // two people's phones adding items at the same time must never produce
+    // the same id.
+    return (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+  }
+
+  // ---------- Group sync (Supabase) ----------
+  const SUPABASE_URL = 'https://ggztzfodmabkcveyufgx.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_38NusaMMq02kcfT9hWZ9Gg_k4pD638S';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const GROUP_ACTION_URL = SUPABASE_URL + '/functions/v1/group-action';
+
+  let currentGroupId = null;
+  let realtimeChannel = null;
+
+  function groupSecretKey(id){ return 'fairshare-secret-' + id; }
+  function isGroupCreator(){
+    return !!currentGroupId && localStorage.getItem(groupSecretKey(currentGroupId)) !== null;
+  }
+  function canDelete(){
+    return !currentGroupId || isGroupCreator();
+  }
+
+  async function callGroupAction(payload){
+    try {
+      const res = await fetch(GROUP_ACTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify(payload),
+      });
+      return await res.json();
+    } catch (err) {
+      console.warn('Group sync request failed:', err);
+      return { error: String(err) };
+    }
+  }
+
+  function applyRemoteGroupState(row){
+    roster = row.roster || [];
+    expenses = row.expenses || [];
+    renderRoster();
+    renderExpenseForm();
+    renderExpenses();
+    hideResults();
+  }
+
+  function subscribeToGroup(groupId){
+    if (realtimeChannel) sb.removeChannel(realtimeChannel);
+    realtimeChannel = sb
+      .channel('group-' + groupId)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'groups', filter: 'id=eq.' + groupId },
+        (payload) => applyRemoteGroupState(payload.new)
+      )
+      .subscribe();
+  }
+
+  async function loadGroup(groupId){
+    const { data, error } = await sb.from('groups').select('*').eq('id', groupId).single();
+    if (error || !data) {
+      console.warn('Could not load group:', error);
+      return false;
+    }
+    currentGroupId = groupId;
+    applyRemoteGroupState(data);
+    subscribeToGroup(groupId);
+    renderGroupBar();
+    return true;
+  }
+
+  async function saveAsGroup(){
+    const groupId = newId().replace(/-/g, '').slice(0, 12);
+    const secret = newId();
+
+    const result = await callGroupAction({ action: 'create', groupId, secret, roster, expenses });
+    if (result.error) {
+      alert(t('group_create_failed'));
+      return;
+    }
+
+    currentGroupId = groupId;
+    localStorage.setItem(groupSecretKey(groupId), secret);
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('group', groupId);
+    window.history.replaceState({}, '', url);
+
+    subscribeToGroup(groupId);
+    renderGroupBar();
+    renderRoster();
+    renderExpenses();
+  }
+
+  function copyGroupLink(){
+    const input = document.getElementById('group-link-input');
+    if (!input) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).catch(() => {});
+
+    const btn = document.getElementById('group-copy-btn');
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = t('copied_label');
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    }
+  }
+
+  function renderGroupBar(){
+    const bar = document.getElementById('group-bar');
+    if (!bar) return;
+
+    if (!currentGroupId) {
+      bar.innerHTML = `<button class="add-btn full-width" onclick="saveAsGroup()">${t('save_group_btn')}</button>`;
+      return;
+    }
+
+    const link = window.location.href;
+    bar.innerHTML = `
+      <p class="group-bar-label">${t('group_link_label')}</p>
+      <div class="group-link-row">
+        <input type="text" readonly value="${escapeHtml(link)}" id="group-link-input">
+        <button class="copy-btn" id="group-copy-btn" onclick="copyGroupLink()">${t('copy_btn')}</button>
+      </div>
+      <p class="group-live-indicator"><span class="dot"></span> ${t('live_syncing')}</p>
+    `;
+  }
 
   function t(key){ return TEXTS[key][LANG]; }
 
@@ -815,16 +1025,21 @@
     const name = input.value.trim();
     if (!name) { input.focus(); return; }
 
-    roster.push({ id: rosterIdCounter++, name });
+    const person = { id: newId(), name };
+    roster.push(person);
     input.value = '';
     input.focus();
 
     renderRoster();
     renderExpenseForm();
     hideResults();
+
+    if (currentGroupId) callGroupAction({ action: 'add_person', groupId: currentGroupId, item: person });
   }
 
   function removeRosterPerson(id){
+    if (!canDelete()) return; // safety net - the button shouldn't even be visible in this case
+
     roster = roster.filter(p => p.id !== id);
     // Also drop this person from any expense they were paying or splitting.
     expenses = expenses.filter(e => e.paidBy !== id);
@@ -835,6 +1050,15 @@
     renderExpenseForm();
     renderExpenses();
     hideResults();
+
+    if (currentGroupId) {
+      callGroupAction({
+        action: 'remove_person',
+        groupId: currentGroupId,
+        secret: localStorage.getItem(groupSecretKey(currentGroupId)),
+        itemId: id,
+      });
+    }
   }
 
   function renderRoster(){
@@ -849,9 +1073,12 @@
       roster.forEach(p => {
         const row = document.createElement('div');
         row.className = 'item-row';
+        const delBtn = canDelete()
+          ? `<button class="item-del" aria-label="remove" onclick="removeRosterPerson('${p.id}')">✕</button>`
+          : '';
         row.innerHTML = `
           <span class="item-name">${escapeHtml(p.name)}</span>
-          <button class="item-del" aria-label="remove" onclick="removeRosterPerson(${p.id})">✕</button>
+          ${delBtn}
         `;
         list.appendChild(row);
       });
@@ -871,7 +1098,7 @@
       opt.textContent = p.name;
       select.appendChild(opt);
     });
-    if (roster.some(p => String(p.id) === previousValue)) select.value = previousValue;
+    if (roster.some(p => p.id === previousValue)) select.value = previousValue;
 
     // Default: everyone currently on the roster is selected to split a new expense.
     selectedParticipants = new Set(roster.map(p => p.id));
@@ -901,21 +1128,22 @@
 
     const description = descInput.value.trim();
     const amount = parseFloat(amountInput.value);
-    const paidBy = parseInt(paidBySelect.value, 10);
+    const paidBy = paidBySelect.value; // a roster id (string, not numeric) - do not parseInt this
     const participants = Array.from(selectedParticipants);
 
     if (roster.length < 2) return;
     if (isNaN(amount) || amount <= 0) { amountInput.focus(); return; }
-    if (isNaN(paidBy)) { return; }
+    if (!paidBy) { return; }
     if (participants.length === 0) { return; }
 
-    expenses.push({
-      id: expenseIdCounter++,
+    const expense = {
+      id: newId(),
       description: description || t('default_expense_label'),
       amount,
       paidBy,
       participants,
-    });
+    };
+    expenses.push(expense);
 
     descInput.value = '';
     amountInput.value = '';
@@ -923,12 +1151,25 @@
 
     renderExpenses();
     hideResults();
+
+    if (currentGroupId) callGroupAction({ action: 'add_expense', groupId: currentGroupId, item: expense });
   }
 
   function removeExpense(id){
+    if (!canDelete()) return; // safety net - the button shouldn't even be visible in this case
+
     expenses = expenses.filter(e => e.id !== id);
     renderExpenses();
     hideResults();
+
+    if (currentGroupId) {
+      callGroupAction({
+        action: 'remove_expense',
+        groupId: currentGroupId,
+        secret: localStorage.getItem(groupSecretKey(currentGroupId)),
+        itemId: id,
+      });
+    }
   }
 
   function renderExpenses(){
@@ -944,6 +1185,9 @@
         const row = document.createElement('div');
         row.className = 'expense-row';
         const participantNames = e.participants.map(pid => escapeHtml(personName(pid))).join(', ');
+        const delBtn = canDelete()
+          ? `<button class="item-del" aria-label="remove" onclick="removeExpense('${e.id}')">✕</button>`
+          : '';
         row.innerHTML = `
           <div class="expense-top">
             <span class="expense-desc">${escapeHtml(e.description)}</span>
@@ -951,7 +1195,7 @@
           </div>
           <div class="expense-meta">
             <span>${escapeHtml(personName(e.paidBy))} → ${participantNames}</span>
-            <button class="item-del" aria-label="remove" onclick="removeExpense(${e.id})">✕</button>
+            ${delBtn}
           </div>
         `;
         list.appendChild(row);
@@ -1109,6 +1353,7 @@
       splitBill();
     }
     updateInstallStepsText();
+    renderGroupBar();
   }
   function buildBarcode(){
     const bc = document.getElementById('barcode');
@@ -1141,6 +1386,14 @@
     renderExpenseForm();
     renderExpenses();
     initInstallBanner();
+
+    const urlGroupId = new URLSearchParams(window.location.search).get('group');
+    if (urlGroupId) {
+      const joined = await loadGroup(urlGroupId);
+      if (!joined) renderGroupBar(); // couldn't load it - fall back to local mode, show "Save as a group"
+    } else {
+      renderGroupBar();
+    }
   }
 
   init();
