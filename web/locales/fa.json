@@ -34,5 +34,10 @@
   "copy_btn": "کپی",
   "copied_label": "کپی شد!",
   "live_syncing": "همگام‌سازی زنده",
-  "group_create_failed": "ذخیره گروه ممکن نشد. اتصال خود را بررسی کرده و دوباره امتحان کنید."
+  "group_create_failed": "ذخیره گروه ممکن نشد. اتصال خود را بررسی کرده و دوباره امتحان کنید.",
+  "split_equal_btn": "تقسیم مساوی",
+  "split_exact_btn": "مبلغ دقیق",
+  "exact_balanced": "متعادل",
+  "exact_remaining_label": "باقی‌مانده:",
+  "exact_over_label": "بیش از حد:"
 }

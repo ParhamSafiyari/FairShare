@@ -582,6 +582,74 @@
     color:#fff;
   }
 
+  .split-mode-toggle{
+    display:flex;
+    gap:6px;
+    margin-bottom:12px;
+  }
+  .mode-btn{
+    flex:1;
+    font-size:12.5px;
+    font-family:var(--font-body);
+    font-weight:600;
+    padding:8px 10px;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    background:#fff;
+    color:var(--slate);
+    cursor:pointer;
+  }
+  [dir="rtl"] .mode-btn{ font-family:'Vazirmatn', sans-serif; }
+  .mode-btn.selected{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:#fff;
+  }
+
+  .exact-amounts{
+    margin-bottom:12px;
+    padding:10px 12px;
+    background:#F8FAF7;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+  }
+  .exact-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:5px 0;
+  }
+  .exact-row .exact-name{
+    font-size:13.5px;
+    color:var(--ink);
+    font-weight:500;
+  }
+  .exact-row input{
+    width:90px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    padding:6px 8px;
+    text-align:right;
+    background:#fff;
+    color:var(--ink);
+  }
+  [dir="rtl"] .exact-row input{ text-align:left; }
+  .exact-total-row{
+    display:flex;
+    justify-content:space-between;
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px dashed var(--line);
+    font-size:12.5px;
+    font-weight:600;
+  }
+  [dir="rtl"] .exact-total-row{ font-family:'Vazirmatn', sans-serif; }
+  .exact-total-row.balanced{ color:var(--emerald); }
+  .exact-total-row.unbalanced{ color:var(--coral); }
+
   .add-btn.full-width{
     width:100%;
     height:auto;
@@ -761,6 +829,13 @@
       <p class="split-among-label" data-t="split_among_label">Split between</p>
       <div class="chips" id="participant-chips"></div>
 
+      <div class="split-mode-toggle" id="split-mode-toggle">
+        <button type="button" class="mode-btn selected" data-mode="equal" onclick="setSplitMode('equal')" data-t="split_equal_btn">Split equally</button>
+        <button type="button" class="mode-btn" data-mode="exact" onclick="setSplitMode('exact')" data-t="split_exact_btn">Exact amounts</button>
+      </div>
+
+      <div class="exact-amounts hidden" id="exact-amounts"></div>
+
       <button class="add-btn full-width" onclick="addExpense()" data-t="add_expense_btn">Add expense</button>
 
       <div class="items" id="expenses-list" style="margin-top:14px;"></div>
@@ -841,6 +916,11 @@
     copied_label:        { en:"Copied!", fa:"کپی شد!" },
     live_syncing:        { en:"Live syncing", fa:"همگام‌سازی زنده" },
     group_create_failed: { en:"Couldn't save this group. Check your connection and try again.", fa:"ذخیره گروه ممکن نشد. اتصال خود را بررسی کرده و دوباره امتحان کنید." },
+    split_equal_btn:     { en:"Split equally", fa:"تقسیم مساوی" },
+    split_exact_btn:     { en:"Exact amounts", fa:"مبلغ دقیق" },
+    exact_balanced:      { en:"Balanced", fa:"متعادل" },
+    exact_remaining_label: { en:"Remaining:", fa:"باقی‌مانده:" },
+    exact_over_label:    { en:"Over by:", fa:"بیش از حد:" },
   };
 
   let TEXTS = FALLBACK_TEXTS;
@@ -1088,6 +1168,8 @@
 
   // ---------- Expense form (paid-by select + participant chips) ----------
   let selectedParticipants = new Set();
+  let splitMode = 'equal'; // 'equal' | 'exact'
+  let exactAmounts = {}; // { personId: "12.50" } - raw input strings, kept per person
 
   function renderExpenseForm(){
     const select = document.getElementById('expense-paidby');
@@ -1103,7 +1185,18 @@
 
     // Default: everyone currently on the roster is selected to split a new expense.
     selectedParticipants = new Set(roster.map(p => p.id));
+    exactAmounts = {};
+    setSplitMode('equal');
+  }
+
+  function setSplitMode(mode){
+    splitMode = mode;
+    document.querySelectorAll('#split-mode-toggle .mode-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.mode === mode);
+    });
+    document.getElementById('exact-amounts').classList.toggle('hidden', mode !== 'exact');
     renderParticipantChips();
+    if (mode === 'exact') renderExactAmounts();
   }
 
   function renderParticipantChips(){
@@ -1117,9 +1210,61 @@
         if (selectedParticipants.has(p.id)) selectedParticipants.delete(p.id);
         else selectedParticipants.add(p.id);
         renderParticipantChips();
+        if (splitMode === 'exact') renderExactAmounts();
       };
       wrap.appendChild(chip);
     });
+  }
+
+  function renderExactAmounts(){
+    const wrap = document.getElementById('exact-amounts');
+    wrap.innerHTML = '';
+
+    const selected = roster.filter(p => selectedParticipants.has(p.id));
+    selected.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'exact-row';
+      const value = exactAmounts[p.id] !== undefined ? exactAmounts[p.id] : '';
+      row.innerHTML = `
+        <span class="exact-name">${escapeHtml(p.name)}</span>
+        <input type="number" min="0" step="0.01" placeholder="0.00" value="${escapeHtml(value)}" data-person="${p.id}">
+      `;
+      wrap.appendChild(row);
+    });
+
+    wrap.querySelectorAll('input[data-person]').forEach(input => {
+      input.addEventListener('input', () => {
+        exactAmounts[input.dataset.person] = input.value;
+        updateExactTotalRow();
+      });
+    });
+
+    const totalRow = document.createElement('div');
+    totalRow.className = 'exact-total-row';
+    totalRow.id = 'exact-total-row';
+    wrap.appendChild(totalRow);
+
+    updateExactTotalRow();
+  }
+
+  function updateExactTotalRow(){
+    const totalRow = document.getElementById('exact-total-row');
+    if (!totalRow) return;
+
+    const targetAmount = parseFloat(document.getElementById('expense-amount').value) || 0;
+    const enteredSum = Object.values(exactAmounts).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+    const diff = Math.round((targetAmount - enteredSum) * 100) / 100;
+
+    if (Math.abs(diff) < 0.01) {
+      totalRow.className = 'exact-total-row balanced';
+      totalRow.textContent = '✓ ' + t('exact_balanced');
+    } else if (diff > 0) {
+      totalRow.className = 'exact-total-row unbalanced';
+      totalRow.textContent = t('exact_remaining_label') + ' ' + fmt(diff);
+    } else {
+      totalRow.className = 'exact-total-row unbalanced';
+      totalRow.textContent = t('exact_over_label') + ' ' + fmt(Math.abs(diff));
+    }
   }
 
   function addExpense(){
@@ -1144,11 +1289,21 @@
       paidBy,
       participants,
     };
+
+    if (splitMode === 'exact') {
+      const enteredSum = participants.reduce((sum, pid) => sum + (parseFloat(exactAmounts[pid]) || 0), 0);
+      if (Math.abs(Math.round((amount - enteredSum) * 100) / 100) >= 0.01) return; // not balanced - button should already be effectively disabled by the UI hint
+      expense.shares = {};
+      participants.forEach(pid => { expense.shares[pid] = Math.round((parseFloat(exactAmounts[pid]) || 0) * 100) / 100; });
+    }
+
     expenses.push(expense);
 
     descInput.value = '';
     amountInput.value = '';
     descInput.focus();
+    exactAmounts = {};
+    setSplitMode('equal');
 
     renderExpenses();
     hideResults();
@@ -1185,7 +1340,9 @@
       expenses.forEach(e => {
         const row = document.createElement('div');
         row.className = 'expense-row';
-        const participantNames = e.participants.map(pid => escapeHtml(personName(pid))).join(', ');
+        const participantNames = e.shares
+          ? e.participants.map(pid => `${escapeHtml(personName(pid))} (${fmt(e.shares[pid] || 0)})`).join(', ')
+          : e.participants.map(pid => escapeHtml(personName(pid))).join(', ');
         const delBtn = canDelete()
           ? `<button class="item-del" aria-label="remove" onclick="removeExpense('${e.id}')">✕</button>`
           : '';
@@ -1282,10 +1439,17 @@
 
     expenses.forEach(e => {
       paidTotals[e.paidBy] = (paidTotals[e.paidBy] || 0) + e.amount;
-      const share = e.amount / e.participants.length;
-      e.participants.forEach(pid => {
-        owedTotals[pid] = (owedTotals[pid] || 0) + share;
-      });
+      if (e.shares) {
+        // Exact-amount split: each participant owes precisely what was entered for them.
+        e.participants.forEach(pid => {
+          owedTotals[pid] = (owedTotals[pid] || 0) + (e.shares[pid] || 0);
+        });
+      } else {
+        const share = e.amount / e.participants.length;
+        e.participants.forEach(pid => {
+          owedTotals[pid] = (owedTotals[pid] || 0) + share;
+        });
+      }
     });
 
     const balances = {};
@@ -1374,6 +1538,9 @@
   });
   document.getElementById('expense-amount').addEventListener('keydown', e => {
     if (e.key === 'Enter') addExpense();
+  });
+  document.getElementById('expense-amount').addEventListener('input', () => {
+    if (splitMode === 'exact') updateExactTotalRow();
   });
   document.getElementById('expense-desc').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('expense-amount').focus();

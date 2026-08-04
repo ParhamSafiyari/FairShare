@@ -1,7 +1,7 @@
 // FairShare service worker
 // Caches the app shell so it works offline and loads instantly once installed.
 
-const CACHE_NAME = 'fairshare-v1.1.0';
+const CACHE_NAME = 'fairshare-v1.1.1';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
@@ -60,13 +60,11 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(event.request)
         .then((response) => {
-          if (event.request.url.startsWith('http')) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => cached);
     })
   );
 });

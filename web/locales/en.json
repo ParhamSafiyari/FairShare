@@ -34,5 +34,10 @@
   "copy_btn": "Copy",
   "copied_label": "Copied!",
   "live_syncing": "Live syncing",
-  "group_create_failed": "Couldn't save this group. Check your connection and try again."
+  "group_create_failed": "Couldn't save this group. Check your connection and try again.",
+  "split_equal_btn": "Split equally",
+  "split_exact_btn": "Exact amounts",
+  "exact_balanced": "Balanced",
+  "exact_remaining_label": "Remaining:",
+  "exact_over_label": "Over by:"
 }
