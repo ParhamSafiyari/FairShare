@@ -19,7 +19,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 
@@ -1106,17 +1106,23 @@
       <p class="group-live-indicator"><span class="dot"></span> ${t('live_syncing')}</p>
       <p class="group-qr-label">${t('group_qr_label')}</p>
       <div class="group-qr-wrap">
-        <canvas id="group-qr-canvas"></canvas>
+        <div id="group-qr-canvas"></div>
       </div>
     `;
 
-    const canvas = document.getElementById('group-qr-canvas');
-    if (canvas && window.QRCode) {
-      QRCode.toCanvas(canvas, link, {
+    const container = document.getElementById('group-qr-canvas');
+    if (container && window.QRCode) {
+      container.innerHTML = '';
+      new QRCode(container, {
+        text: link,
         width: 160,
-        margin: 1,
-        color: { dark: '#1B2A4A', light: '#FDFEFC' },
-      }, (err) => { if (err) console.warn('QR render failed:', err); });
+        height: 160,
+        colorDark: '#1B2A4A',
+        colorLight: '#FDFEFC',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    } else if (container) {
+      console.warn('QR library did not load');
     }
   }
 
