@@ -19,6 +19,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 
@@ -758,6 +759,24 @@
     50% { opacity:0.35; }
   }
 
+  .group-qr-label{
+    font-size:12px;
+    color:var(--slate);
+    margin:14px 0 8px;
+    text-align:center;
+  }
+  [dir="rtl"] .group-qr-label{ font-family:'Vazirmatn', sans-serif; }
+  .group-qr-wrap{
+    display:flex;
+    justify-content:center;
+    padding:10px;
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:12px;
+    width:fit-content;
+    margin:0 auto;
+  }
+
 </style>
 </head>
 <body>
@@ -916,6 +935,7 @@
     default_expense_label: { en:"Item", fa:"مورد" },
     save_group_btn:      { en:"Save as a group (sync with friends)", fa:"ذخیره به‌عنوان گروه (همگام‌سازی با دوستان)" },
     group_link_label:    { en:"Share this link with your friends:", fa:"این لینک را با دوستانتان به اشتراک بگذارید:" },
+    group_qr_label:      { en:"Or scan to join:", fa:"یا برای پیوستن اسکن کنید:" },
     copy_btn:            { en:"Copy", fa:"کپی" },
     copied_label:        { en:"Copied!", fa:"کپی شد!" },
     live_syncing:        { en:"Live syncing", fa:"همگام‌سازی زنده" },
@@ -1084,7 +1104,20 @@
         <button class="copy-btn" id="group-copy-btn" onclick="copyGroupLink()">${t('copy_btn')}</button>
       </div>
       <p class="group-live-indicator"><span class="dot"></span> ${t('live_syncing')}</p>
+      <p class="group-qr-label">${t('group_qr_label')}</p>
+      <div class="group-qr-wrap">
+        <canvas id="group-qr-canvas"></canvas>
+      </div>
     `;
+
+    const canvas = document.getElementById('group-qr-canvas');
+    if (canvas && window.QRCode) {
+      QRCode.toCanvas(canvas, link, {
+        width: 160,
+        margin: 1,
+        color: { dark: '#1B2A4A', light: '#FDFEFC' },
+      }, (err) => { if (err) console.warn('QR render failed:', err); });
+    }
   }
 
   function t(key){ return TEXTS[key][LANG]; }

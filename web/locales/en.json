@@ -31,6 +31,7 @@
   "default_expense_label": "Item",
   "save_group_btn": "Save as a group (sync with friends)",
   "group_link_label": "Share this link with your friends:",
+  "group_qr_label": "Or scan to join:",
   "copy_btn": "Copy",
   "copied_label": "Copied!",
   "live_syncing": "Live syncing",
