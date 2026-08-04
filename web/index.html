@@ -660,6 +660,10 @@
     margin-bottom:4px;
   }
   [dir="rtl"] .add-btn.full-width{ font-family:'Vazirmatn', sans-serif; }
+  .add-btn.full-width:disabled{
+    background:#B8C4BC;
+    cursor:not-allowed;
+  }
 
   .expense-row{
     display:flex;
@@ -836,7 +840,7 @@
 
       <div class="exact-amounts hidden" id="exact-amounts"></div>
 
-      <button class="add-btn full-width" onclick="addExpense()" data-t="add_expense_btn">Add expense</button>
+      <button class="add-btn full-width" id="add-expense-btn" onclick="addExpense()" data-t="add_expense_btn">Add expense</button>
 
       <div class="items" id="expenses-list" style="margin-top:14px;"></div>
       <p class="empty-hint" id="expenses-empty-hint" data-t="expenses_empty_hint">No expenses yet.</p>
@@ -1196,7 +1200,11 @@
     });
     document.getElementById('exact-amounts').classList.toggle('hidden', mode !== 'exact');
     renderParticipantChips();
-    if (mode === 'exact') renderExactAmounts();
+    if (mode === 'exact') {
+      renderExactAmounts(); // this also sets the button's disabled state via updateExactTotalRow
+    } else {
+      document.getElementById('add-expense-btn').disabled = false; // equal split never needs balancing
+    }
   }
 
   function renderParticipantChips(){
@@ -1254,8 +1262,9 @@
     const targetAmount = parseFloat(document.getElementById('expense-amount').value) || 0;
     const enteredSum = Object.values(exactAmounts).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
     const diff = Math.round((targetAmount - enteredSum) * 100) / 100;
+    const balanced = Math.abs(diff) < 0.01;
 
-    if (Math.abs(diff) < 0.01) {
+    if (balanced) {
       totalRow.className = 'exact-total-row balanced';
       totalRow.textContent = '✓ ' + t('exact_balanced');
     } else if (diff > 0) {
@@ -1265,6 +1274,9 @@
       totalRow.className = 'exact-total-row unbalanced';
       totalRow.textContent = t('exact_over_label') + ' ' + fmt(Math.abs(diff));
     }
+
+    const addBtn = document.getElementById('add-expense-btn');
+    if (addBtn) addBtn.disabled = !balanced;
   }
 
   function addExpense(){

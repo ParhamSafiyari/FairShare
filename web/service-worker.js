@@ -1,7 +1,7 @@
 // FairShare service worker
 // Caches the app shell so it works offline and loads instantly once installed.
 
-const CACHE_NAME = 'fairshare-v1.1.1';
+const CACHE_NAME = 'fairshare-v1.1.2';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
